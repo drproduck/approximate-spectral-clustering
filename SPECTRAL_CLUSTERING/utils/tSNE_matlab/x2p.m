@@ -95,6 +95,6 @@ function [H, P] = Hbeta(D, beta)
     P = exp(-D * beta);
     sumP = sum(P);
     H = log(sumP) + beta * sum(D .* P) / sumP;
-    P = P / sumP;
+    P = P / sumP;   
 end
 
