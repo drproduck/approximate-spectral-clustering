@@ -1,14 +1,4 @@
-clear;
-load('20NewsHome');
-[label,kept_idx] = cosine_SC(fea, 20, 2,'cluster_method','kmeans','remove_low',1,'embed_method','coclustering',...
-    'remove_high',1,'affinity_type','doc_term');
-
-gnd = gnd(kept_idx);
-size(label)
-label = bestMap(gnd, label);
-ac = sum(label == gnd) / size(gnd, 1)
-
-function [label,kept_idx] = cosine_SC(fea, k, t, varargin)
+function [label,kept_idx] = fast_cosine_SC(fea, k, t, varargin)
 
 %affinity_type:
                 %doc_term
@@ -68,7 +58,6 @@ elseif strcmp(affinity_type,'doc_term')
     D1 = sparse(1:no_kept,1:no_kept, d1);
     D2 = sparse(1:m,1:m, d2);
     A = D1 * fea * D2;
-    size(A)
     [u,s,v] = svds(A, k);
     if t == 0
         u = D1 * u;
@@ -88,7 +77,7 @@ if strcmp(embed_method, 'direct')
     elseif strcmp(cluster_method, 'discretize')
         label = discretize(u);
     end
-elseif strcmp(embed_method, 'coclustering')
+elseif strcmp(embed_method, 'coclustering') && ~strcmp(affinity_type, 'point')
     w = [u;v];
     w(:,1) = [];
     w = w ./ sqrt(sum(w.^2,2));

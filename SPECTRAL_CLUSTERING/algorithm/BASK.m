@@ -36,7 +36,7 @@ function [label, kept_idx, U, reps] = BASK(fea, k, r, s, t, affinity, varargin)
 %sigma: scaling factor for gaussian kernel. Default is computed as
 %mean(mean(distance_matrix))
 
-n = size(fea,1);
+[n,m] = size(fea);
 
 if (~exist('opts','var'))
    opts = [];
@@ -96,13 +96,12 @@ if strcmp(affinity, 'cosine')
         kept_idx = amax(high:low);
         no_kept = size(kept_idx,1);
         plot(1:n,val);
-        fprintf(fileid,'remove %.0f%% of dataset...\n',(no_kept / n) *100);
-        fea_kept = fea(kept_idx,:);
+        fprintf(fileid,'remove %.0f%% of dataset...\n',(1 - no_kept / n) *100);
         fprintf(fileid,'removing outliers done in %.2f seconds\n', toc);
     else
         no_kept = n;
         kept_idx = 1:n;
-        fea_kept = fea;
+     
     end
         
     %select landmarks
@@ -110,14 +109,15 @@ if strcmp(affinity, 'cosine')
     tic;
     if strcmp(select_method, 'kmeans') 
         fprintf(fileid,'kmeans...\n');
-        [lb, reps] = litekmeans(fea_kept, r, 'Distance', 'cosine', 'MaxIter', initIter, 'Replicates', initRes);
+        [lb, reps] = litekmeans(fea(kept_idx,:), r, 'Distance', 'cosine', 'MaxIter', initIter, 'Replicates', initRes);
         lbcount = hist(lb, 1:r); %#ok<NASGU>
     elseif strcmp(select_method, 'uniform')
         fprintf(fileid,'random sampling...\n');
-        reps = fea_kept(randsample(no_kept, r, false), :);
+        reps = fea(kept_idx(randsample(no_kept, r, false)), :);
     else
         error('unsupported mode');
     end
+    
     W = fea * reps';
     fprintf(fileid,'done in %.2f seconds\n', toc);
     
@@ -176,12 +176,10 @@ elseif strcmp(affinity, 'gaussian')
         no_kept = size(kept_idx,1);
         plot(1:n,val);
         fprintf(fileid,'remove %.0f%% of dataset...\n',(no_kept / n) *100);
-        fea_kept = fea(kept_idx,:);
         fprintf(fileid,'removing outliers done in %.2f seconds\n', toc);
     else
         no_kept = n;
         kept_idx = 1:n;
-        fea_kept = fea;
     end
     
     %select landmarks
@@ -189,12 +187,12 @@ elseif strcmp(affinity, 'gaussian')
     tic;
     if strcmp(select_method, 'kmeans')
         fprintf(fileid,'kmeans...\n');
-        [lb, reps, ~, VAR] = litekmeans(fea_kept, r, 'MaxIter', initIter, 'Replicates', initRes);
+        [lb, reps, ~, VAR] = litekmeans(fea(kept_idx,:), r, 'MaxIter', initIter, 'Replicates', initRes);
         lbcount = hist(lb, 1:r);
     
     elseif strcmp(select_method, 'uniform')
         fprintf(fileid,'random sampling\n');
-        reps = fea_kept(randsample(no_kept, r, false), :);
+        reps = fea(kept_idx(randsample(no_kept, r, false)), :);
        
     elseif strcmp(select_method, '++')
         fprintf(fileid,'D2 weight sampling\n');
@@ -205,19 +203,17 @@ elseif strcmp(affinity, 'gaussian')
     fprintf(fileid,'done in %.2f seconds\n',toc);
     W = EuDist2(fea, reps, 0);
     
-    %no longer useful
-    clear fea_kept;
-    
-    % determine sigma
-    if strcmp(select_method, 'kmeans')
-        sigma = mean(sqrt(VAR ./ lbcount));
-    elseif isfield(opts, 'sigma')
-        sigma = opts.sigma;
-    warning('off', 'stats:kmeans:FailedToConverge')
-    elseif strcmp(select_method, 'random') || strcmp(select_method, '++')
-        error('method random and ++ require sigma')
-    end
-    fprintf(fileid,'using sigma = %.2f\n',sigma);
+    %determine sigma
+%     if isfield(opts, 'sigma')
+%         sigma = opts.sigma;
+%     elseif strcmp(select_method, 'kmeans')
+%         sigma = mean(sqrt(VAR ./ lbcount));
+%     warning('off', 'stats:kmeans:FailedToConverge')
+%     elseif strcmp(select_method, 'random') || strcmp(select_method, '++')
+%         error('method random and ++ require sigma')
+%     end
+%     
+%     fprintf(fileid,'using sigma = %.2f\n',sigma);
  
     %sparse representation
     fprintf(fileid,'constructing sparse A...\n');
@@ -230,10 +226,14 @@ elseif strcmp(affinity, 'gaussian')
             temp = (idx(:,i)-1)*n+(1:n)';
             W(temp) = 1e100; 
         end
+        
+        %test self-tune sigma
+        sigma = dump(:,s);
+        dump = exp(-dump ./ (2.0 .* sigma .^ 2));
 
         % manipulate index to efficiently create sparse matrix Z
         % Z is now (normalized to sum 1) smallest r landmarks in each row
-        dump = exp(-dump/(2.0*sigma^2));
+%         dump = exp(-dump/(2.0*sigma^2));
         Gidx = repmat((1:n)',1,s);
         Gjdx = idx;
         W = sparse(Gidx(:),Gjdx(:),dump(:),n,r);
@@ -256,17 +256,15 @@ end
 
 fprintf(fileid,'Computing Laplacian and diffusion map...\n');
 tic;
+
 d1 = sum(W, 2);
-d1 = max(d1, 1e-100);
 d2 = sum(W, 1);
+d1 = max(d1, 1e-100);
 d2 = max(d2, 1e-100);
-
-D1 = sparse(1:no_kept, 1:no_kept, d1.^(-0.5));
-D2 = sparse(1:r, 1:r, d2.^(-0.5));
-
-L = D1 * W * D2;
-
-[U,S,V] = mySVD(L, k);
+D1 = sparse(1:no_kept,1:no_kept,d1.^(-0.5));
+D2 = sparse(1:r,1:r,d2.^(-0.5));
+L = D1*W*D2;
+[U,S,V] = svds(L, k);
 
 if t > 0
     U = D1 * U * S.^t;
@@ -317,3 +315,4 @@ end
 fprintf(fileid,'Done in %.2f seconds\n', toc);
 
 end
+
