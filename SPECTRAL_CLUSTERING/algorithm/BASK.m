@@ -259,8 +259,8 @@ tic;
 
 d1 = sum(W, 2);
 d2 = sum(W, 1);
-d1 = max(d1, 1e-100);
-d2 = max(d2, 1e-100);
+d1 = max(d1, 1e-15);
+d2 = max(d2, 1e-15);
 D1 = sparse(1:no_kept,1:no_kept,d1.^(-0.5));
 D2 = sparse(1:r,1:r,d2.^(-0.5));
 L = D1*W*D2;
