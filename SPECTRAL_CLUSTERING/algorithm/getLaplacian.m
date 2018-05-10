@@ -1,8 +1,10 @@
 
-function L = getLaplacian(A, tol, mode)
+function [L,D1,D2] = getLaplacian(A, tol, mode)
 
 % compute normalized Laplacian of a matrix based on mode
-
+% return L: normalized Laplacian matrix
+%        D1: row-sum ^ (-1/2) \in R^(n*n)
+%        D2: col-sum ^ (-1/2) \in R^(m*m)
 [n,m] = size(A);
 if strcmp(mode, 'symmetric')
     d1 = sum(A, 2);

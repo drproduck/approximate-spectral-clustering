@@ -1,23 +1,7 @@
 clear;
 addpath(genpath('/home/drproduck/Documents/MATLAB/SPECTRAL_CLUSTERING/'));
-load('news')
-[n,m] = size(fea);
-% [U,S,V] = bask_doc_term(fea, 20, 0);
-tic;[U,S,V] = save_eigs('news_eigs.mat', fea, 20, 0);toc
-load('data_20news');
-% W = [U;V];
-% group_by_affinity(U,V, 10000, 5, gnd,cls_names, words)
-% group_by_cluster(U,V, n, 5, gnd, cls_names, words) 
-% lsi(U,S,V, 10000, 5, gnd,cls_names, words)
-group_by_affinity_learned(U,V, 9000, 5, gnd,cls_names, words)
-
-function [] = lsi(U,S,V, no_sample, top_k, gnd, cls_names, words)
-n = size(U,1);
-ind = randsample(n, no_sample);
-U = U(ind, :);
-gnd = gnd(ind, :);
-affinity = U * S * V';
-
+load('20news10879')
+[n,m] = size(fea);P
 for i = 1:20
     A = affinity(gnd == i, :);
     word_score = sum(A, 1);
