@@ -1,18 +1,21 @@
-function fea = tfidf(fea)
+function fea = tfidf(fea, mode)
 %  fea is a document-term frequency matrix, this function return the tfidf ([1+log(tf)]*log[N/df])
 %  weighted document-term matrix.
 
 [n,m] = size(fea);
 [idx,jdx,vv] = find(fea);
-df = full(sum(sparse(idx,jdx,1),1));
+df = full(sum(sparse(idx,jdx,1,n,m),1));
 
 df(df==0) = 1;
 idf = log(n./df);
 
+
 fea = sparse(idx,jdx,log(vv)+1,n,m);
 
-% fea = fea .* idf;
+if strcmp(mode,'hard')
+fea = fea .* idf;
 
+elseif strcmp(mode,'easy')
 fea = fea';
 idf = idf';
 
@@ -28,3 +31,5 @@ for i = 1:ceil(n/nBlock)
 end
 
 fea = fea';
+
+end
