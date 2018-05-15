@@ -1,19 +1,58 @@
 clear;
 addpath(genpath('/home/drproduck/Documents/MATLAB/SPECTRAL_CLUSTERING/'));
-load('20news10879')
-[n,m] = size(fea);P
-for i = 1:20
-    A = affinity(gnd == i, :);
-    word_score = sum(A, 1);
-    [sc, max_indx] = maxk(word_score, top_k);
-    fprintf('group %s, most frequent words: ', cls_names{i})
-    for j = 1:top_k
-        fprintf('%s (%f), ', words{max_indx(j)}, sc(j))
+load('20newsorigin')
+group(fea,gnd,vocab)
+% for i = 1:20
+%     A = affinity(gnd == i, :);
+%     word_score = sum(A, 1);
+%     [sc, max_indx] = maxk(word_score, top_k);
+%     fprintf('group %s, most frequent words: ', cls_names{i})
+%     for j = 1:top_k
+%         fprintf('%s (%f), ', words{max_indx(j)}, sc(j))
+%     end
+%     fprintf('\n')
+% end
+
+function group(fea, gnd,vocab)
+nlabel=max(gnd);
+[n,m] = size(fea);
+fea=tfidf(fea,'hard');
+fea=fea./sqrt(sum(fea.^2,2));
+[l,d1,d2]=getLaplacian(fea,1e-12,'bipartite');
+[u,s,v]=svds(l,nlabel);
+u=d1*u;
+v=d2*v;
+u(:,1)=[];
+v(:,1)=[];
+u=u./sqrt(sum(u.^2,2));
+v=v./sqrt(sum(v.^2,2));
+w=[u;v];
+[learned_label,centers] = litekmeans(w, 20, 'Distance', 'cosine', 'MaxIter', 100, 'Replicates',10);
+doclabel=learned_label(1:n);
+doclabel = bestMap(gnd, doclabel);
+ac=sum(doclabel==gnd) / length(gnd)
+center_word_dist=centers*v';
+[dist,idx]=sort(center_word_dist,2,'ascend');
+for i=1:nlabel
+    fprintf('closest words to center %d\n',i);
+    for j=1:10
+        fprintf('%s\n',vocab{idx(i,j)});
     end
-    fprintf('\n')
+end
 end
 
-end
+
+% for i = 1:20
+%     A = affinity(learned_label == i, :);
+%     word_score = sum(A, 1);
+%     [sc, max_indx] = maxk(word_score, top_k);
+%     fprintf('group %s, most frequent words: ', cls_names{i})
+%     for j = 1:top_k
+%         fprintf('%s (%f), ', words{max_indx(j)}, sc(j))
+%     end
+%     fprintf('\n')
+% end
+
 function [] = group_by_affinity(U,V, no_sample, top_k, gnd, cls_names, words)
 n = size(U,1);
 ind = randsample(n, no_sample);
