@@ -2,14 +2,14 @@
 % visualizing word and doc embedding in bipartite Laplacian, 20news 
 clear;
 colormap default
-load('20newsorigin.mat')
-
+load('20newstruncated.mat')
+nlabel=max(gnd);
 [n,m] = size(fea);
 % if using all groups
 % fea = min(fea, 10);
 fea = tfidf(fea,'hard');
 fea=fea./sqrt(sum(fea.^2,2));
-idx = [find(gnd==3);find(gnd==4);find(gnd==6)];
+idx = [find(gnd==1);find(gnd==2);find(gnd==3);find(gnd==4);find(gnd==5)];
 gnd1 = gnd(idx,:);
 
 % if using only indicated groups
@@ -28,29 +28,33 @@ end
 
 %
 % draw column sum and row sum distribution
-figure(1);
-row_sum = sum(fea,2);
-col_sum=sum(fea,1);
-[val,~]=sort(row_sum);
-subplot(121)
-scatter(1:n,val)
-[val,~]=sort(col_sum);
-subplot(122)
-scatter(1:m,val)
-drawnow
+% figure(1);
+% row_sum = sum(fea,2);
+% col_sum=sum(fea,1);
+% [val,~]=sort(row_sum);
+% subplot(121)
+% scatter(1:n,val)
+% [val,~]=sort(col_sum);
+% subplot(122)
+% scatter(1:m,val)
+% drawnow
 %
 
 %
 % get most common words from each ground truth groups
-idx_rw_1 = getMostCommon(fea, gnd, 1, 20);
-idx_rw_2 = getMostCommon(fea, gnd, 2, 20);
-idx_rw_3 =getMostCommon(fea,gnd,3,20);
-idx_rw_4 = getMostCommon(fea,gnd,4,20);
-idx_rw_5 = getMostCommon(fea,gnd,5,20);
-idx_rw_6 = getMostCommon(fea,gnd,6,20);
-idx_rw = [idx_rw_3;idx_rw_4;idx_rw_6];
+idx_rw_1 = getMostCommon(fea, gnd, 1, 5);
+idx_rw_2 = getMostCommon(fea, gnd, 2, 5);
+idx_rw_3 =getMostCommon(fea,gnd,3,5);
+idx_rw_4 =getMostCommon(fea,gnd,4,5);
+idx_rw_5 =getMostCommon(fea,gnd,5,5);
+
+
+idx_rw = [idx_rw_1;idx_rw_2;idx_rw_3;idx_rw_4;idx_rw_5];
+vocab(idx_rw_1)
 vocab(idx_rw_2)
 vocab(idx_rw_3)
+vocab(idx_rw_4)
+vocab(idx_rw_5)
 % idx_rw = randsample(length(vocab), 100);
 %
 
@@ -89,8 +93,8 @@ vocab(idx_rw_3)
 % average regularizer
 % subplot(122)
 [L,D1,D2] = getLaplacian(fea, 1e-100, 'bipartite');
-[u,s,v] = svds(L, 20);
-for t=0:0
+[u,s,v] = svds(L, nlabel);
+for t=0
     if t==0
         U = D1 * u;
         V = D2 * v;
@@ -98,25 +102,37 @@ for t=0:0
         U=D1*u*s.^t;
         V=D2*v*s.^t;
     end
-    U(:,1)  = [];
+    U(:,1) = [];
     V(:,1) = [];
     U=U./sqrt(sum(U.^2,2));
     V=V./sqrt(sum(V.^2,2));
     disp('regularize accuracy:')
-%     ac=embedcluster(U,V,20,gnd,'kmeans')
+    [label,ac]=embedcluster(U,V,gnd,'kmeans','coclustering');
+    ac
 end
 
-U = U(idx,:);
-for d=1:2:18
-fig=figure(3);
-scatter(V(idx_rw,d),V(idx_rw,d+1),1,'Marker','.');
-text(V(idx_rw,d), V(idx_rw,d+1), vocab(idx_rw), 'FontSize',5);
+figure(2)
+scatter3(V(idx_rw,1),V(idx_rw,2),V(idx_rw,3),1,'Marker','.');
+text(V(idx_rw,1), V(idx_rw,2),V(idx_rw,3), vocab(idx_rw), 'FontSize',5);
 hold on
-scatter(U(:,d),U(:,d+1), 3,bestColor(gnd1), 'Marker','o');
-saveas(fig,strcat('ng2_ng3_ng4_',num2str(d),'_',num2str(d+1),'.jpg'));
+scatter3(U(idx,1),U(idx,2),U(idx,3), 3,bestColor(gnd1), 'Marker','o');
+drawnow
+figure(3)
+scatter3(V(idx_rw,1),V(idx_rw,2),V(idx_rw,3),1,'Marker','.');
+text(V(idx_rw,1), V(idx_rw,2),V(idx_rw,3), vocab(idx_rw), 'FontSize',8);
+hold on
+scatter3(U(idx,1),U(idx,2),U(idx,3), 10,bestColor(gnd1), 'Marker','.');
 drawnow
 hold off
-end
+% hold off
+% figure(2)
+% color=distinguishable_colors(20);
+% for i=1:20
+% scatter3(U(gnd==i,1),U(gnd==i,2),U(gnd==i,3),3,color(i,:),'Marker','o');
+% hold on
+% end
+% legend(topic{:})
+
 %
 % dead word
 % col_sum = sum(fea ~= 0, 1);
@@ -199,15 +215,22 @@ end
 %
 %%%
 
-function ac=embedcluster(U,V,k,gnd,cluster_method)
+function [label,ac]=embedcluster(U,V,gnd,cluster_method,embed_method)
+nlabel=max(gnd);
 n=size(U,1);
 W = [U;V];
 if strcmp(cluster_method, 'kmeans')
-    all_label = litekmeans(W, k, 'Distance', 'cosine', 'MaxIter', 100, 'Replicates',10);
+    if strcmp(embed_method, 'coclustering')
+        all_label = litekmeans(W, nlabel, 'Distance', 'cosine', 'MaxIter', 100, 'Replicates',10);
+        label = all_label(1:n);
+    elseif strcmp(embed_method, 'direct')
+        label=litekmeans(U,nlabel,'Distance','cosine','MaxIter',100,'Replicates',10);
+    end
 elseif strcmp(cluster_method, 'discretize')
     all_label = discretize(W);
+    label = all_label(1:n);
 end
-label = all_label(1:n);
+
 label=bestMap(gnd,label);
 ac=sum(label==gnd)/length(gnd);
 end

@@ -1,4 +1,5 @@
-function label = regularizedsc(fea,gnd,nlabel)
+function label = regularizedsc(fea,gnd)
+nlabel=max(gnd);
 [n,m] = size(fea);
 fea=tfidf(fea,'hard');
 fea=fea./sqrt(sum(fea.^2,2));
@@ -11,7 +12,8 @@ v(:,1)=[];
 u=u./sqrt(sum(u.^2,2));
 v=v./sqrt(sum(v.^2,2));
 w=[u;v];
-[allabel,~] = litekmeans(w, 20, 'Distance', 'cosine', 'MaxIter', 100, 'Replicates',10);
+[allabel,~] = litekmeans(w, nlabel, 'Distance', 'cosine', 'MaxIter', 100, 'Replicates',10);
 label=allabel(1:n);
+% label=litekmeans(u, nlabel, 'Distance', 'cosine', 'MaxIter', 100, 'Replicates',10);
 label = bestMap(gnd, label);
 % ac=sum(doclabel==gnd) / length(gnd)
