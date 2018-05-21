@@ -19,7 +19,7 @@ function ydata = tsne(X, labels, no_dims, initial_dims, perplexity)
 %
 % (C) Laurens van der Maaten, 2010
 % University of California, San Diego
-
+disp('hello')
 
     if ~exist('labels', 'var')
         labels = [];

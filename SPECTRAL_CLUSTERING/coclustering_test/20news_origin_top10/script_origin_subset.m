@@ -2,7 +2,7 @@
 % visualizing word and doc embedding in bipartite Laplacian, 20news 
 clear;
 colormap default
-load('20newsorigin.mat')
+load('20newsorigintop10.mat')
 nlabel=max(gnd);
 
 [n,m] = size(fea);
@@ -66,7 +66,10 @@ for t=0:0
     ac=embedcluster(U,V,nlabel,gnd,'kmeans')
 end
 
-figure(1)
+% [~,proj]=pca([U;V]);
+% U=proj(1:n,:);
+% V=proj(n+1:end,:);
+figure(2)
 scatter3(V(idx_rw,1),V(idx_rw,2),V(idx_rw,3),1,'Marker','.');
 text(V(idx_rw,1), V(idx_rw,2), V(idx_rw,3),vocab(idx_rw), 'FontSize',7);
 hold on
@@ -75,26 +78,26 @@ drawnow
 
 
 % fast cosine + outlier removal
-ac = zeros(10,1);
-ix = 0.01:0.01:0.1;
-i = 1;
-for remove_low = ix
-    fprintf('remove %.2f%% lowest points\n',remove_low*100)
-    ac(i) = cosine(fea, nlabel,gnd,remove_low);
-    i = i + 1;
-end
-plot(ix, ac);
+% ac = zeros(10,1);
+% ix = 0.01:0.01:0.1;
+% i = 1;
+% for remove_low = ix
+%     fprintf('remove %.2f%% lowest points\n',remove_low*100)
+%     ac(i) = cosine(fea, nlabel,gnd,remove_low);
+%     i = i + 1;
+% end
+% plot(ix, ac);
 
 % kmeans with landmark and outlier removal
-ac = zeros(10,1);
-ix = 0.01:0.01:0.1;
-i = 1;
-for remove_low = ix
-    fprintf('remove %.2f%% lowest points\n',remove_low*100)
-    ac(i) = landmark(fea, nlabel,gnd,remove_low);
-    i = i + 1;
-end
-plot(ix, ac);
+% ac = zeros(10,1);
+% ix = 0.01:0.01:0.1;
+% i = 1;
+% for remove_low = ix
+%     fprintf('remove %.2f%% lowest points\n',remove_low*100)
+%     ac(i) = landmark(fea, nlabel,gnd,remove_low);
+%     i = i + 1;
+% end
+% plot(ix, ac);
 %
 
 %

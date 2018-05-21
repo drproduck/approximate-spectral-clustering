@@ -109,7 +109,8 @@ if strcmp(affinity, 'cosine')
     tic;
     if strcmp(select_method, 'kmeans') 
         fprintf(fileid,'kmeans...\n');
-        [lb, reps] = litekmeans(fea(kept_idx,:), r, 'Distance', 'cosine', 'MaxIter', initIter, 'Replicates', initRes);
+        [lb, reps] = litekmeans(fea(kept_idx,:), r, 'Distance', 'cosine', 'MaxIter', initIter, 'Replicates', initRes,...
+            'Start', 'cluster', 'clustermaxrestart', 10, 'clustermaxiter', 100, 'clustersample', 0.1);
         lbcount = hist(lb, 1:r); %#ok<NASGU>
     elseif strcmp(select_method, 'uniform')
         fprintf(fileid,'random sampling...\n');
@@ -187,7 +188,9 @@ elseif strcmp(affinity, 'gaussian')
     tic;
     if strcmp(select_method, 'kmeans')
         fprintf(fileid,'kmeans...\n');
-        [lb, reps, ~, VAR] = litekmeans(fea(kept_idx,:), r, 'MaxIter', initIter, 'Replicates', initRes);
+%         warning('off', 'stats:kmeans:FailedToConverge')
+        [lb, reps, ~, VAR] = litekmeans(fea(kept_idx,:), r, 'MaxIter', initIter, 'Replicates', initRes,...
+            'Start', 'cluster', 'clustermaxrestart', 10, 'clustermaxiter', 100, 'clustersample', 0.1);
         lbcount = hist(lb, 1:r);
     
     elseif strcmp(select_method, 'uniform')
@@ -204,16 +207,16 @@ elseif strcmp(affinity, 'gaussian')
     W = EuDist2(fea, reps, 0);
     
     %determine sigma
-%     if isfield(opts, 'sigma')
-%         sigma = opts.sigma;
-%     elseif strcmp(select_method, 'kmeans')
-%         sigma = mean(sqrt(VAR ./ lbcount));
-%     warning('off', 'stats:kmeans:FailedToConverge')
-%     elseif strcmp(select_method, 'random') || strcmp(select_method, '++')
-%         error('method random and ++ require sigma')
-%     end
-%     
-%     fprintf(fileid,'using sigma = %.2f\n',sigma);
+    if isfield(opts, 'sigma')
+        sigma = opts.sigma;
+    elseif strcmp(select_method, 'kmeans')
+        sigma = mean(sqrt(VAR ./ lbcount));
+
+    elseif strcmp(select_method, 'random') || strcmp(select_method, '++')
+        error('method random and ++ require sigma')
+    end
+    
+    fprintf(fileid,'using sigma = %.2f\n',sigma);
  
     %sparse representation
     fprintf(fileid,'constructing sparse A...\n');
@@ -228,8 +231,8 @@ elseif strcmp(affinity, 'gaussian')
         end
         
         %test self-tune sigma
-        sigma = dump(:,s);
-        dump = exp(-dump ./ (2.0 .* sigma .^ 2));
+%         sigma = dump(:,s);
+%         dump = exp(-dump ./ (2.0 .* sigma .^ 2));
 
         % manipulate index to efficiently create sparse matrix Z
         % Z is now (normalized to sum 1) smallest r landmarks in each row

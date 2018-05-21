@@ -9,7 +9,8 @@ nlabel=max(gnd);
 % fea = min(fea, 10);
 fea = tfidf(fea,'hard');
 fea=fea./sqrt(sum(fea.^2,2));
-idx = [find(gnd==1);find(gnd==2);find(gnd==3);find(gnd==4);find(gnd==5)];
+% idx = [find(gnd==1);find(gnd==2);find(gnd==3);find(gnd==4);find(gnd==5)];
+idx=[find(gnd==1);find(gnd==2);find(gnd==10);find(gnd==13);find(gnd==14)];
 gnd1 = gnd(idx,:);
 
 % if using only indicated groups
@@ -38,24 +39,6 @@ end
 % subplot(122)
 % scatter(1:m,val)
 % drawnow
-%
-
-%
-% get most common words from each ground truth groups
-idx_rw_1 = getMostCommon(fea, gnd, 1, 5);
-idx_rw_2 = getMostCommon(fea, gnd, 2, 5);
-idx_rw_3 =getMostCommon(fea,gnd,3,5);
-idx_rw_4 =getMostCommon(fea,gnd,4,5);
-idx_rw_5 =getMostCommon(fea,gnd,5,5);
-
-
-idx_rw = [idx_rw_1;idx_rw_2;idx_rw_3;idx_rw_4;idx_rw_5];
-vocab(idx_rw_1)
-vocab(idx_rw_2)
-vocab(idx_rw_3)
-vocab(idx_rw_4)
-vocab(idx_rw_5)
-% idx_rw = randsample(length(vocab), 100);
 %
 
 % figure(2)
@@ -110,20 +93,82 @@ for t=0
     [label,ac]=embedcluster(U,V,gnd,'kmeans','coclustering');
     ac
 end
+%
+% get most common words from each ground truth groups
+idx_rw_1 = getMostCommon(fea, gnd, 1, 5);
+idx_rw_2 = getMostCommon(fea, gnd, 2, 5);
+idx_rw_3 =getMostCommon(fea,gnd,3,5);
+idx_rw_4 =getMostCommon(fea,gnd,4,5);
+idx_rw_5 =getMostCommon(fea,gnd,5,5);
+idx_rw_10=getMostCommon(fea,gnd,10,5);
+idx_rw_13=getMostCommon(fea,gnd,13,5);
+idx_rw_14=getMostCommon(fea,gnd,14,5);
 
-figure(2)
-scatter3(V(idx_rw,1),V(idx_rw,2),V(idx_rw,3),1,'Marker','.');
-text(V(idx_rw,1), V(idx_rw,2),V(idx_rw,3), vocab(idx_rw), 'FontSize',5);
+
+% idx_rw = [idx_rw_1;idx_rw_2;idx_rw_3;idx_rw_4;idx_rw_5];
+idx_rw=[idx_rw_1;idx_rw_2;idx_rw_10;idx_rw_13;idx_rw_14];
+vocab(idx_rw_1)
+vocab(idx_rw_2)
+vocab(idx_rw_3)
+vocab(idx_rw_4)
+vocab(idx_rw_5)
+% idx_rw = randsample(length(vocab), 100);
+%
+
+
+
+% figure(2)
+% [~,proj]=pca([U;V]);
+% U=proj(1:n,:);
+% V=proj(n+1:end,:);
+% scatter3(V(idx_rw,1),V(idx_rw,2),V(idx_rw,3),1,'Marker','.');
+% text(V(idx_rw,1), V(idx_rw,2),V(idx_rw,3), vocab(idx_rw), 'FontSize',5);
+% hold on
+% scatter3(U(idx,1),U(idx,2),U(idx,3), 3,bestColor(gnd1), 'Marker','o');
+% drawnow
+
+fig = gcf;
+fig.PaperPositionMode = 'auto'
+fig_pos = fig.PaperPosition;
+fig.PaperSize = [fig_pos(3) fig_pos(4)];
+
 hold on
-scatter3(U(idx,1),U(idx,2),U(idx,3), 3,bestColor(gnd1), 'Marker','o');
-drawnow
-figure(3)
-scatter3(V(idx_rw,1),V(idx_rw,2),V(idx_rw,3),1,'Marker','.');
-text(V(idx_rw,1), V(idx_rw,2),V(idx_rw,3), vocab(idx_rw), 'FontSize',8);
-hold on
-scatter3(U(idx,1),U(idx,2),U(idx,3), 10,bestColor(gnd1), 'Marker','.');
-drawnow
+% [~,proj]=pca([U;V]);
+% U=proj(1:n,:);
+% V=proj(n+1:end,:);
+g=[1,2,10,13,14];
+color=distinguishable_colors(20);
+for i=1:length(g)
+    gn=find(gnd==g(i));
+    scatter3(U(gn,1),U(gn,2),U(gn,3),3,color(i,:),'filled','Marker','o');
+    hold on
+end
+text(V(idx_rw,1), V(idx_rw,2), V(idx_rw,3),vocab(idx_rw), 'FontSize',10);
+legend(topic{g});
+ax = gca;
+outerpos = ax.OuterPosition;
+ti = ax.TightInset; 
+left = outerpos(1) + ti(1);
+bottom = outerpos(2) + ti(2);
+ax_width = outerpos(3) - ti(1) - ti(3);
+ax_height = outerpos(4) - ti(2) - ti(4);
+ax.Position = [left bottom ax_width ax_height];
 hold off
+
+% scatter(V(idx_rw,1),V(idx_rw,2),1,'Marker','.');
+% text(V(idx_rw,1), V(idx_rw,2),vocab(idx_rw), 'FontSize',5);
+% hold on
+% scatter(U(idx,1),U(idx,2),3,bestColor(gnd1), 'Marker','o');
+% drawnow
+% figure(3)
+% scatter(V(idx_rw,1),V(idx_rw,2),1,'Marker','.');
+% text(V(idx_rw,1), V(idx_rw,2),vocab(idx_rw), 'FontSize',10);
+% hold on
+% scatter(U(idx,1),U(idx,2), 3,bestColor(gnd1), 'Marker','o');
+% drawnow
+% hold off
+
+
 % hold off
 % figure(2)
 % color=distinguishable_colors(20);

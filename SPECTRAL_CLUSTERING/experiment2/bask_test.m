@@ -44,7 +44,8 @@ for i = 1:maxit
     else 
         distance = 'sqEuclidean';
     end
-    [lb, reps, ~, VAR] = litekmeans(fea, r, 'Distance', distance, 'replicates', initRes, 'maxiter', initIter, 'Start', 'cluster', 'clustermaxrestart', 10, 'clustermaxiter', 100, 'clustersample', 0.1);
+    [lb, reps, ~, VAR] = litekmeans(fea, r, 'Distance', distance,...
+        'replicates', initRes, 'maxiter', initIter, 'Start', 'cluster', 'clustermaxrestart', 10, 'clustermaxiter', 100, 'clustersample', 0.1);
     km_t(i) = cputime - t0;
     lbcount = hist(lb, 1:r);
     cluster_sigma = sqrt(VAR ./ lbcount);
@@ -67,7 +68,7 @@ for i = 1:maxit
     %KASP
     opts.sigma = sigma;
     opts.pre_label = lb;
-    t0 = cputime;res = kasp(fea, nlabel, r, opts); kasp_t(i) = cputime - t0;
+    t0 = cputime;res = KASP(fea, nlabel, r, opts); kasp_t(i) = cputime - t0;
 	kasp_acc(i) = bestacc(res, gnd);
     fprintf('KASP: %f\n', kasp_acc(i));
 
