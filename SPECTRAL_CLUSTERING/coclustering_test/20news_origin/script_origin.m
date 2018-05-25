@@ -2,7 +2,7 @@
 % visualizing word and doc embedding in bipartite Laplacian, 20news 
 clear;
 colormap default
-load('20newstruncated.mat')
+load('20newsorigin.mat')
 nlabel=max(gnd);
 [n,m] = size(fea);
 % if using all groups
@@ -144,7 +144,9 @@ for i=1:length(g)
     hold on
 end
 text(V(idx_rw,1), V(idx_rw,2), V(idx_rw,3),vocab(idx_rw), 'FontSize',10);
-legend(topic{g});
+hleg1 = legend(topic{g});
+set(hleg1,'position',[0 0 0.2 0.2])
+
 ax = gca;
 outerpos = ax.OuterPosition;
 ti = ax.TightInset; 
