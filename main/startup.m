@@ -1,8 +1,8 @@
 %fire things up
-addpath(genpath('/home/drproduck/approximate-spectral-clustering/SPECTRAL_CLUSTERING/'));
-ok = true;
-if max(size(strfind(path, 'SPECTRAL_CLUSTERING'))) == 0
-    ok = false;
+addpath(genpath('/srv/home/kpham/approximate-spectral-clustering/'));
+ok = false;
+if strfind(path, 'approximate-spectral-clustering-dummy')
+    ok = true;
 end
     
 if ok
