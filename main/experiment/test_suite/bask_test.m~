@@ -1,0 +1,155 @@
+function bask_test(mat, affinity, seed, r, s, maxt, maxit)
+% r: number of representatives
+% s: number of nearest neighbors landmarks to keep
+
+% gaussian
+
+disp('preparing variables...')
+
+fprintf('Processing %s data set\n', mat);
+addpath(genpath('/srv/home/kpham/MATLAB/'));
+
+load(mat, 'fea','gnd');
+nlabel = max(gnd);
+n = length(gnd);
+rng(seed);
+initIter = 10;
+initRes = 1;
+
+lsc.a=zeros(maxit,1);
+kasp.a=zeros(maxit,1); 
+lbdm2x.a=zeros(maxit,maxt);
+lbdm2y.a=zeros(maxit,maxt);
+lbdm1.a=zeros(maxit,maxt);
+dhillon.a = zeros(maxit,1);
+cspec.a = zeros(maxit,1);
+
+
+km_t = zeros(maxit,1);
+lsc.t = zeros(maxit,1);
+kasp.t = zeros(maxit,1);
+lbdm2x.t = zeros(maxit,maxt);
+lbdm2y.t = zeros(maxit,maxt);
+lbdm1.t = zeros(maxit,maxt);
+dhillon.t = zeros(maxit,1);
+cspec.t = zeros(maxit,1);
+
+if strcmp(affinity, 'cosine')
+    fea = bsxfun(@rdivide, fea, sqrt(sum(fea.^2, 2)));
+end
+
+mode = 'random';
+
+for i = 1:maxit
+    %common representatives
+
+    t0 = cputime;
+    if strcmp(affinity, 'cosine')
+        distance = 'cosine';
+    else 
+        distance = 'sqEuclidean';
+    end
+    
+    if strcmp(mode, 'kmeans')
+        [lb, reps, ~, VAR] = litekmeans(fea, r, 'Distance', distance,...
+            'replicates', initRes, 'maxiter', initIter, 'Start', 'cluster', 'clustermaxrestart', 10, 'clustermaxiter', 100, 'clustersample', 0.1);
+        km_t(i) = cputime - t0;
+        lbcount = hist(lb, 1:r);
+        cluster_sigma = sqrt(VAR ./ lbcount);
+        sigma = mean(cluster_sigma);
+        
+    elseif strcmp(mode, 'random')
+        % random sampling
+        sample = randsample(length(gnd), r);
+        reps = fea(sample,:);
+        
+       
+        % compute sigma using 7-nearest-neighbors
+        W = EuDist2(fea, fea, false);
+        dump = zeros(n,7);        
+        idx = dump;
+        for i = 1:7
+            [dump(:,i),idx(:,i)] = min(W,[],2);
+            temp = (idx(:,i)-1)*n+(1:n)';
+            W(temp) = 1e100; 
+        end
+        
+        sigma = mean(mean(dump(:,7)));
+        
+    end
+    
+    % setting up tops
+    fprintf('Iteration %d:\n', i);
+
+    opts.r = r;
+    opts.s = s;
+    opts.reps = reps;
+    opts.lbcount = lbcount;
+    opts.sigma = sigma;
+    
+    % added random sampling
+    opts.mode = mode;
+    
+    %LSC
+    t0 = cputime;res = lsc(fea, nlabel, opts); lsc.t(i) = cputime - t0;
+    lsc.a(i) = bestacc(res, gnd);
+    fprintf('LSC: %f\n', lsc.a(i));
+    
+    %KASP
+    opts.sigma = sigma;
+    opts.pre_label = lb;
+    t0 = cputime;res = KASP(fea, nlabel, r, opts); kasp.t(i) = cputime - t0;
+	kasp.a(i) = bestacc(res, gnd);
+    fprintf('KASP: %f\n', kasp.a(i));
+
+    % MY ALGORITHM
+    %[l1,l2,l3,l4,l5,l6,l7,l8,original_t(i),reps_t(i),all_t(i)] = bask_t(fea, nlabel, affinity, maxt, opts);
+    [lbdm2xi, lbdm2yi, lbdm1i, dhilloni,cspeci] = bask_t_3(fea, k, affinity, t, opts);
+    
+    % lbdm 2x and 2y, j is time step
+    for j = 1:maxt
+        lbdm2x.a(i,j) = bestacc(lbdm2xi.a(:,j),gnd);
+        lbdm2x.t(i,j) = lbdm2xi.t(j);
+        lbdm2y.a(i,j) = bestacc(lbdm2yi.a(:,j),gnd);
+        lbdm2y.t(i,j) = lbdm2yi.t(j);
+        lbdm1.a(i,j) = bestacc(lbdm1i.a(:,j),gnd);
+        lbdm1.t(i,j) = lbdm1i.t(j);
+        fprintf('lbdm 2x, step size = %d: %f\n', j*2, lbdm2x.a(i,j));
+        fprintf('lbdm 2y, step size = %d: %f\n',j*2, lbdm2y.a(i,j));
+        fprintf('lbdm 1,  step size = %d: %f\n', j*2-1, lbdm1.a(i,j));   
+    end 
+    
+    % dhillon and cspec
+    dhillon.a(i) = bestacc(dhilloni.a, gnd);
+    dhillon.t(i) = dhilloni.t;
+    cspec.a(i) = bestacc(cspeci.a, gnd);
+    cspec.t(i) = cspeci.t;
+    
+    fprintf('dhillon co-clustering: %f\n', dhillon.a(i));
+    fprintf('cspec: %f\n', cspec.a(i));
+      
+    clear opts;
+ 
+end
+% Average accuracy
+fprintf('\nAverage accuracy:\n')
+fprintf('LSC: %f\n', mean(lsc.a));
+fprintf('KASP: %f\n', mean(kasp.a));
+
+for j = 1:maxt
+    fprintf('lbdm2x, step size = %d: %f\n', j*2, mean(lbdm2x.a(:,j)));
+    fprintf('lbdm2y, step size = %d: %f\n',j*2, mean(lbdm2y.a(:,j)));
+    fprintf('lbdm1, step size = %d: %f\n', j*2-1, mean(lbdm1.a(:,j)));
+end
+fprintf('dhillon co-clustering: %f\n', mean(dhillon.a));
+fprintf('cspec: %f\n',mean(cspec.a));
+
+save(strcat(mat, '_bask_result'), 'lsc','kasp','lbdm2x','lbdm2y','lbdm1',...
+    'dhillon','cspec')
+clear;
+end
+
+function acc = bestacc(label, gnd)
+l = bestMap(gnd, label);
+acc = sum((l - gnd) == 0) / size(gnd, 1);
+end
