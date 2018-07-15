@@ -15,23 +15,23 @@ rng(seed);
 initIter = 10;
 initRes = 1;
 
-lsc.a=zeros(maxit,1);
-kasp.a=zeros(maxit,1); 
-lbdm2x.a=zeros(maxit,maxt);
-lbdm2y.a=zeros(maxit,maxt);
-lbdm1.a=zeros(maxit,maxt);
-dhillon.a = zeros(maxit,1);
-cspec.a = zeros(maxit,1);
+lsca=zeros(maxit,1);
+kaspa=zeros(maxit,1); 
+lbdm2xa=zeros(maxit,maxt);
+lbdm2ya=zeros(maxit,maxt);
+lbdm1a=zeros(maxit,maxt);
+dhillona = zeros(maxit,1);
+cspeca = zeros(maxit,1);
 
 
 km_t = zeros(maxit,1);
-lsc.t = zeros(maxit,1);
-kasp.t = zeros(maxit,1);
-lbdm2x.t = zeros(maxit,maxt);
-lbdm2y.t = zeros(maxit,maxt);
-lbdm1.t = zeros(maxit,maxt);
-dhillon.t = zeros(maxit,1);
-cspec.t = zeros(maxit,1);
+lsct = zeros(maxit,1);
+kaspt = zeros(maxit,1);
+lbdm2xt = zeros(maxit,maxt);
+lbdm2yt = zeros(maxit,maxt);
+lbdm1t = zeros(maxit,maxt);
+dhillont = zeros(maxit,1);
+cspect = zeros(maxit,1);
 
 if strcmp(affinity, 'cosine')
     fea = bsxfun(@rdivide, fea, sqrt(sum(fea.^2, 2)));
@@ -62,7 +62,6 @@ for i = 1:maxit
         sample = randsample(length(gnd), r);
         reps = fea(sample,:);
         
-       
         % compute sigma using 7-nearest-neighbors
         t0 = cputime;
         W = EuDist2(fea, fea, false);
@@ -84,68 +83,80 @@ for i = 1:maxit
     opts.r = r;
     opts.s = s;
     opts.reps = reps;
-    opts.lbcount = lbcount;
+    if strcmp(mode, 'kmeans')
+        opts.lbcount = lbcount;
+    end
     opts.sigma = sigma;
     
     % added random sampling
     opts.mode = mode;
     
     %LSC
-    t0 = cputime;res = lsc(fea, nlabel, opts); lsc.t(i) = cputime - t0;
-    lsc.a(i) = bestacc(res, gnd);
-    fprintf('LSC: %f\n', lsc.a(i));
+    t0 = cputime;res = lsc(fea, nlabel, opts); lsct(i) = cputime - t0;
+    lsca(i) = bestacc(res, gnd);
+    fprintf('LSC: %f\n', lsca(i));
     
     %KASP
-    opts.sigma = sigma;
-    opts.pre_label = lb;
-    t0 = cputime;res = KASP(fea, nlabel, r, opts); kasp.t(i) = cputime - t0;
-	kasp.a(i) = bestacc(res, gnd);
-    fprintf('KASP: %f\n', kasp.a(i));
+    %opts.sigma = sigma;
+    %opts.pre_label = lb;
+    %t0 = cputime;res = KASP(fea, nlabel, r, opts); kaspt(i) = cputime - t0;
+    %    kaspa(i) = bestacc(res, gnd);
+    %fprintf('KASP: %f\n', kaspa(i));
 
     % MY ALGORITHM
     %[l1,l2,l3,l4,l5,l6,l7,l8,original_t(i),reps_t(i),all_t(i)] = bask_t(fea, nlabel, affinity, maxt, opts);
-    [lbdm2xi, lbdm2yi, lbdm1i, dhilloni,cspeci] = bask_t_3(fea, k, affinity, t, opts);
+    [lbdm2xi, lbdm2yi, lbdm1i, dhilloni,cspeci] = lbdm_suite(fea, nlabel, affinity, maxt, opts);
+    lbdm2xia = lbdm2xi.a;
+    lbdm2xit = lbdm2xi.t;
+    lbdm2yia = lbdm2yi.a;
+    lbdm2yit = lbdm2yi.t;
+    lbdm1ia  = lbdm1i.a;
+    lbdm1it  = lbdm1i.t;
+    dhillonia= dhilloni.a;
+    dhillonit= dhilloni.t;
+    cspecia  = cspeci.a;
+    cspecit  = cspeci.t;
     
     % lbdm 2x and 2y, j is time step
     for j = 1:maxt
-        lbdm2x.a(i,j) = bestacc(lbdm2xi.a(:,j),gnd);
-        lbdm2x.t(i,j) = lbdm2xi.t(j);
-        lbdm2y.a(i,j) = bestacc(lbdm2yi.a(:,j),gnd);
-        lbdm2y.t(i,j) = lbdm2yi.t(j);
-        lbdm1.a(i,j) = bestacc(lbdm1i.a(:,j),gnd);
-        lbdm1.t(i,j) = lbdm1i.t(j);
-        fprintf('lbdm 2x, step size = %d: %f\n', j*2, lbdm2x.a(i,j));
-        fprintf('lbdm 2y, step size = %d: %f\n',j*2, lbdm2y.a(i,j));
-        fprintf('lbdm 1,  step size = %d: %f\n', j*2-1, lbdm1.a(i,j));   
+        lbdm2xa(i,j) = bestacc(lbdm2xia(:,j),gnd);
+        lbdm2xt(i,j) = lbdm2xit(j);
+        lbdm2ya(i,j) = bestacc(lbdm2yia(:,j),gnd);
+        lbdm2yt(i,j) = lbdm2yit(j);
+        lbdm1a(i,j) = bestacc(lbdm1ia(:,j),gnd);
+        lbdm1t(i,j) = lbdm1it(j);
+        fprintf('lbdm 2x, step size = %d: %f\n', j*2, lbdm2xa(i,j));
+        fprintf('lbdm 2y, step size = %d: %f\n',j*2, lbdm2ya(i,j));
+        fprintf('lbdm 1,  step size = %d: %f\n', j*2-1, lbdm1a(i,j));   
     end 
     
     % dhillon and cspec
-    dhillon.a(i) = bestacc(dhilloni.a, gnd);
-    dhillon.t(i) = dhilloni.t;
-    cspec.a(i) = bestacc(cspeci.a, gnd);
-    cspec.t(i) = cspeci.t;
+    dhillona(i) = bestacc(dhillonia, gnd);
+    dhillont(i) = dhillonit;
+    cspeca(i) = bestacc(cspecia, gnd);
+    cspect(i) = cspecit;
     
-    fprintf('dhillon co-clustering: %f\n', dhillon.a(i));
-    fprintf('cspec: %f\n', cspec.a(i));
+    fprintf('dhillon co-clusteri: %f\n', dhillona(i));
+    fprintf('cspec: %f\n', cspeca(i));
       
     clear opts;
  
 end
 % Average accuracy
 fprintf('\nAverage accuracy:\n')
-fprintf('LSC: %f\n', mean(lsc.a));
-fprintf('KASP: %f\n', mean(kasp.a));
+fprintf('LSC: %f\n', mean(lsca));
+%fprintf('KASP: %f\n', mean(kaspa));
 
 for j = 1:maxt
-    fprintf('lbdm2x, step size = %d: %f\n', j*2, mean(lbdm2x.a(:,j)));
-    fprintf('lbdm2y, step size = %d: %f\n',j*2, mean(lbdm2y.a(:,j)));
-    fprintf('lbdm1, step size = %d: %f\n', j*2-1, mean(lbdm1.a(:,j)));
+    fprintf('lbdm2x, step size = %d: %f\n', j*2, mean(lbdm2xa(:,j)));
+    fprintf('lbdm2y, step size = %d: %f\n',j*2, mean(lbdm2ya(:,j)));
+    fprintf('lbdm1, step size = %d: %f\n', j*2-1, mean(lbdm1a(:,j)));
 end
-fprintf('dhillon co-clustering: %f\n', mean(dhillon.a));
-fprintf('cspec: %f\n',mean(cspec.a));
+fprintf('dhillon co-clustering: %f\n', mean(dhillona));
+fprintf('cspec: %f\n',mean(cspeca));
 
-save(strcat(mat, '_bask_result'), 'lsc','kasp','lbdm2x','lbdm2y','lbdm1',...
-    'dhillon','cspec')
+save(strcat(mat, '_bask_result'), 'lsca','lsct','lbdm2xa','lbdm2xt','lbdm2ya','lbdm2yt','lbdm1a','lbdm1t',...
+    'dhillona','dhillont','cspeca','cspect','km_t')
 clear;
 end
 
