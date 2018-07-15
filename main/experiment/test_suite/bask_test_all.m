@@ -1,8 +1,8 @@
 clear;
-maxt = 10;
-maxit = 2;
+maxt = 20;
+maxit = 50;
 seed = 99999;
-
+addpath(genpath('/srv/home/kpham/approximate-spectral-clustering/'))
 bask_test('letter', 'gaussian', seed, 500, 5, maxt, maxit)
 bask_test('mnist', 'gaussian', seed, 500, 5, maxt,maxit)
 bask_test('pend', 'gaussian',seed, 500, 5, maxt,maxit)
