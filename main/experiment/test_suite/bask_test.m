@@ -7,7 +7,7 @@ function bask_test(mat, affinity, seed, r, s, maxt, maxit)
 disp('preparing variables...')
 
 fprintf('Processing %s data set\n', mat);
-
+mode = 'random';
 load(mat, 'fea','gnd');
 nlabel = max(gnd);
 n = length(gnd);
@@ -23,8 +23,10 @@ lbdm1a=zeros(maxit,maxt);
 dhillona = zeros(maxit,1);
 cspeca = zeros(maxit,1);
 
+if strcmp(mode, 'kmeans')
+    km_t = zeros(maxit,1);
+end
 
-km_t = zeros(maxit,1);
 lsct = zeros(maxit,1);
 kaspt = zeros(maxit,1);
 lbdm2xt = zeros(maxit,maxt);
@@ -37,7 +39,21 @@ if strcmp(affinity, 'cosine')
     fea = bsxfun(@rdivide, fea, sqrt(sum(fea.^2, 2)));
 end
 
-mode = 'random';
+if strcmp(mode, 'random')
+        % compute sigma using 7-nearest-neighbors
+        t0 = cputime;
+        W = EuDist2(fea, fea, false);
+        dump = zeros(n,7);        
+        idx = dump;
+        for k = 1:7
+            [dump(:,k),idx(:,k)] = min(W,[],2);
+            temp = (idx(:,k)-1)*n+(1:n)';
+            W(temp) = 1e100; 
+        end
+        
+        sigma = mean(mean(dump(:,7)));
+        km_t = cputime - t0;
+end
 
 for i = 1:maxit
     %common representatives
@@ -62,19 +78,6 @@ for i = 1:maxit
         sample = randsample(length(gnd), r);
         reps = fea(sample,:);
         
-        % compute sigma using 7-nearest-neighbors
-        t0 = cputime;
-        W = EuDist2(fea, fea, false);
-        dump = zeros(n,7);        
-        idx = dump;
-        for k = 1:7
-            [dump(:,k),idx(:,k)] = min(W,[],2);
-            temp = (idx(:,k)-1)*n+(1:n)';
-            W(temp) = 1e100; 
-        end
-        
-        sigma = mean(mean(dump(:,7)));
-        km_t(i) = cputime - t0;
     end
     
     % setting up tops
