@@ -3,7 +3,7 @@ function m_sensitivity_test(mat, affinity, seed, R, s, maxt, maxit)
 % fix s (sparse), vary m (landmark)
 
 fprintf('\nProcessing %s data set\n', mat);
-addpath(genpath('/home/drproduck/Documents/MATLAB/'));
+addpath(genpath('/srv/home/kpham/approximate-spectral-clustering/'));
 load(mat);
 nlabel = max(gnd);
 rng(seed);
