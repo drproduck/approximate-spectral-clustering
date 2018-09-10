@@ -1,4 +1,4 @@
-function [label, kept_idx, U, reps] = BASK(fea, k, r, s, t, affinity, varargin)
+function [label, kept_idx, U, reps] = LBDM(fea, k, r, s, t, affinity, varargin)
 %LARGE SCALE SPECTRAL CLUSTERING USING DIFFUSION COORDINATE ON
 %LANDMARK-BASED BIPARTITE GRAPH
 
