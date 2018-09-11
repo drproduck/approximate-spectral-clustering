@@ -6,18 +6,19 @@ function [label, kept_idx, U, reps] = LBDM(fea, k, r, s, t, affinity, varargin)
 
 %REQUIRED:
 %fea: the data in row-major order (i.e each datapoint is a row)
-%k: desired number of clusters
-%affinity: currently supports cosine and radial basis function (gaussian)
-%r: number of representatives (d. 100)
-%s: number of nearest landmarks to keep
-%t: diffusion time step
+%k: number of clusters
+%r: number of representatives (e.g 500)
+%s: number of nearest landmarks to keep (e.g 5)
+%t: diffusion time step (e.g 2)
 %affinity:
-                %'gaussian':
-                %'cosine': will normalize features first
+                %'gaussian'
+                %'cosine' (will normalize features first)
 
 %PARAMETER:
 %remove_outlier: remove a subset of outliers based on point's total
 %distances to other points
+%sigma: scaling factor for gaussian kernel.
+
 %select_method: 
                 %'random': pick landmarks uniformly random
                 %'++': pick landmarks using kmeans++ weighting
@@ -32,9 +33,6 @@ function [label, kept_idx, U, reps] = LBDM(fea, k, r, s, t, affinity, varargin)
 % initRes/finalRes: number of restarts for initial/final Kmeans (d. 1/10)
 % initIter/finalIter: number of maximum iterations for initial/final
 
-%OPTS 
-%sigma: scaling factor for gaussian kernel. Default is computed as
-%mean(mean(distance_matrix))
 
 [n,m] = size(fea);
 
@@ -52,6 +50,7 @@ addParameter(p,'select_method','kmeans');
 addParameter(p,'embed_method','landmark');
 addParameter(p,'cluster_method','kmeans');
 addParameter(p,'remove_outlier',[1,1]);
+addParameter(p,'sigma',false);
 addParameter(p,'fileid',1);
 parse(p,varargin{:});
 
@@ -63,6 +62,7 @@ select_method = p.Results.select_method;
 embed_method = p.Results.embed_method;
 cluster_method = p.Results.cluster_method;
 remove_outlier = p.Results.remove_outlier;
+sigma = p.Results.sigma;
 fileid = p.Results.fileid;
 
     
@@ -207,13 +207,13 @@ elseif strcmp(affinity, 'gaussian')
     W = EuDist2(fea, reps, 0);
     
     %determine sigma
-    if isfield(opts, 'sigma')
-        sigma = opts.sigma;
-    elseif strcmp(select_method, 'kmeans')
-        sigma = mean(sqrt(VAR ./ lbcount));
+    if ~sigma
+        if strcmp(select_method, 'kmeans')
+            sigma = mean(sqrt(VAR ./ lbcount));
 
-    elseif strcmp(select_method, 'random') || strcmp(select_method, '++')
-        error('method random and ++ require sigma')
+        elseif strcmp(select_method, 'random') || strcmp(select_method, '++')
+            error('method random and ++ currently do not support finding sigma, please specify sigma in this function argument')
+        end
     end
     
     fprintf(fileid,'using sigma = %.2f\n',sigma);
@@ -234,9 +234,7 @@ elseif strcmp(affinity, 'gaussian')
 %         sigma = dump(:,s);
 %         dump = exp(-dump ./ (2.0 .* sigma .^ 2));
 
-        % manipulate index to efficiently create sparse matrix Z
-        % Z is now (normalized to sum 1) smallest r landmarks in each row
-%         dump = exp(-dump/(2.0*sigma^2));
+        dump = exp(-dump/(2.0*sigma^2));
         Gidx = repmat((1:n)',1,s);
         Gjdx = idx;
         W = sparse(Gidx(:),Gjdx(:),dump(:),n,r);
