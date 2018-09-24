@@ -51,6 +51,7 @@ addParameter(p,'embed_method','landmark');
 addParameter(p,'cluster_method','kmeans');
 addParameter(p,'remove_outlier',[1,1]);
 addParameter(p,'sigma',false);
+addParameter(p,'reps',false); % for testing
 addParameter(p,'fileid',1);
 parse(p,varargin{:});
 
@@ -63,6 +64,7 @@ embed_method = p.Results.embed_method;
 cluster_method = p.Results.cluster_method;
 remove_outlier = p.Results.remove_outlier;
 sigma = p.Results.sigma;
+reps = p.Results.reps;
 fileid = p.Results.fileid;
 
     
@@ -200,6 +202,9 @@ elseif strcmp(affinity, 'gaussian')
     elseif strcmp(select_method, '++')
         fprintf(fileid,'D2 weight sampling\n');
         [~, reps] = kmeans(fea_kept, r, 'MaxIter',0,'Replicates',1);
+    elseif strcmp(select_method, 'given')
+        fprintf(fileid, 'given rep points\n');
+        r = length(reps);
     else
         error('unsupported mode');
     end
@@ -251,6 +256,7 @@ elseif strcmp(affinity, 'gaussian')
         W = W(kept_idx,:);
     end
     fprintf(fileid,'done in %.2f seconds\n',toc);
+    
 end
 
 %% compute laplacian
